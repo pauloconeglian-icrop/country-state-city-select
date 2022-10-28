@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Select País, Estado, cidade</title>
+  <style>
+    * {
+      font-family: Helvetica;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .container {
+      max-width: 1336px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+    .col {
+      margin: 5px;
+      position: relative;
+    }
+    .search, .input {
+      height: 35px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      display: block;
+      min-width: 100%;
+      padding: 0 10px;
+    }
+    label {
+      margin-bottom: 5px;
+      display: inline-block;
+    }
+    .options {
+      position: absolute;
+      top: bottom;
+      border: 1px solid #ccc;
+      padding: 5px;
+      width: 100%;
+      border-radius: 3px;
+      display: none;
+      box-shadow: 0 10px 10px -15px rgba(0,0,0,0.5);
+    }
+    .items {
+      margin-top: 5px;
+      max-height: 250px;
+      overflow: hidden;
+      overflow-y: auto;
+    }
+    .items span {
+      display: block;
+      padding: 5px;
+      cursor: pointer;
+    }
+    .items span:hover {
+      background-color: #f1f1f1;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <form action="" autocomplete="off">
+      <div class="row">
+        <div class="col">
+          <label for="country">País</label>
+          <input type="text" class="input" id="country" name="country">
+          <div class="options">
+            <input type="text" class="search" placeholder="Buscar" autocomplete="false">
+            <div class="items countries">
+              <div class="items-scroll">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <label for="state">Estado</label>
+          <input type="text" class="input" id="state" name="state">
+          <div class="options">
+            <input type="text" class="search" placeholder="Buscar">
+            <div class="items states">
+              <div class="items-scroll">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <label for="city">Cidade</label>
+          <input type="text" class="input" id="city" name="city">
+          <div class="options">
+            <input type="text" class="search" placeholder="Buscar">
+            <div class="items cities">
+              <div class="items-scroll">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+  <script>
+    async function getrCountries() {
+      await fetch('https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/countries.json')
+      .then(response => response.json())
+      .then(async (data) => {
+        await data.forEach((country) => {
+          var countryName = country.name;
+          $('.countries > div').append(`<span data-id="${country.id}" data-name="${countryName}">${countryName}</span>`);
+        });
+      });
+    }
+
+    async function getStates(countryId, countryName) {
+      await fetch('https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/states.json')
+      .then(response => response.json())
+      .then(async (data) => {
+
+        var $input = $('#state');
+
+        // Clear previous states
+        $('.states > div').html("");
+
+        await data.forEach((state) => {
+          var stateName = state.name;
+          if(state.country_id == countryId)
+            $('.states > div').append(`<span data-id="${state.id}" data-name="${stateName}">${stateName}</span>`);
+        });
+
+        if ( $('.states > div').children().length == 0 ) {
+          $('.states > div').append(`<span>Nenhum estado encontrado em <strong>${countryName}</strong>.</span>`);
+          getCities(countryId, "");
+          return false;
+        }
+
+        $input.next('.options').find('.search').on('keyup', {input: '#state'}, searchTerm);
+
+        $input.val('Selecione o Estado').focus();
+        $input.next('.options').show();
+
+        $input.next().find('.items span').on('click', function(e) {
+          e.preventDefault();
+          var stateName = $(this).data('name');
+          var stateId = $(this).data('id');
+          $input.val(stateName);
+          $input.next('.options').hide();
+
+          getCities(stateId, stateName);
+        })
+      });
+    }
+
+    async function getCities(stateId, stateName) {
+      await fetch('https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/cities.json')
+      .then(response => response.json())
+      .then(async (data) => {
+
+        var $input = $('#city');
+
+        // Clear previous cities
+        $('.cities > div').html("");
+
+        await data.forEach((city) => {
+          var cityName = city.name;
+          if(city.state_id == stateId)
+            $('.cities > div').append(`<span data-id="${city.id}" data-name="${cityName}">${cityName}</span>`);
+        });
+
+        if ( $('.cities > div').children().length == 0 ) {
+          $('.cities > div').append(`<span>Nenhuma cidade encontrada em <strong>${stateName}</strong>.</span>`);
+          return false;
+        }
+
+        $input.next('.options').find('.search').on('keyup', {input: '#city'}, searchTerm);
+
+        $input.val('Selecione a Cidade').focus();
+        $input.next('.options').show();
+
+        $input.next().find('.items span').on('click', function(e) {
+          e.preventDefault();
+          var stateName = $(this).data('name');
+          var stateId = $(this).data('id');
+          $input.val(stateName);
+          $input.next().hide();
+        })
+      });
+    }
+
+    // search input action
+    function searchTerm(input) {
+      var filter, option, txtValue;
+      var inputId = input.data.input;
+
+      filter = $(this).val();
+      options = $(inputId).next('.options').find('span');
+
+      for (i = 0; i < options.length; i++) {
+        option = options[i]
+        txtValue = option.textContent || option.innerText;
+        if (txtValue.indexOf(filter) > -1) {
+          option.style.display = "";
+        } else {
+          option.style.display = "none";
+        }
+      }
+    }
+
+    getrCountries();
+
+    $(function(){
+      $('.input').val('Selecione o país').on('click', function(e) {
+        e.preventDefault();
+        var $input = $(this);
+        var $inputId = `#${$input.attr('id')}`;
+
+        $input.next('.options').show();
+
+        $input.next('.options').find('.search').on('keyup', {input: $inputId}, searchTerm);
+
+        // items click action
+        $($inputId).next().find('.items span').on('click', function(e) {
+          e.preventDefault();
+          var name = $(this).data('name');
+          var id = $(this).data('id');
+
+          $input.val(name);
+          $input.next('.options').hide();
+
+          switch ($input.attr('id')) {
+            case 'country':
+              getStates(id, name);
+              break;
+            case 'state':
+              getCities(id, name);
+              break;
+          }
+        })
+      })
+
+      $('.input').next('.options').on('mouseleave', function(){
+        $(this).hide();
+      });
+    })
+  </script>
+
+</body>
+</html>
